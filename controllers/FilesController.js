@@ -99,7 +99,7 @@ class FilesController {
       name: fileData.name,
       type: fileData.type,
       isPublic: fileData.isPublic,
-      parentId: fileData.parentId === '0' ? '0' : ObjectId(fileData.parentId),
+      parentId: fileData.parentId === '0' ? fileData.parentId : ObjectId(fileData.parentId),
       localPath: fileData.localPath,
     });
 
