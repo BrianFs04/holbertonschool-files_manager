@@ -162,7 +162,19 @@ class FilesController {
   static async getIndex(req, res) {
     const token = req.header('X-token');
     if (!token) {
-      res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const redisTk = await redisClient.get(`auth_${token}`);
+    if (!redisTk) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisTk) });
+    if (!user) {
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const parentId = req.query.parentId || '0';
@@ -192,6 +204,10 @@ class FilesController {
           $limit: 20,
         },
       ];
+      const folder = await dbClient.collection('files').findOne({ _id: ObjectId(parentId) });
+      if (!folder || folder.type !== 'folder') {
+        return res.status(200).send([]);
+      }
     }
 
     const files = await dbClient.db.collection('files').aggregate(agg);
