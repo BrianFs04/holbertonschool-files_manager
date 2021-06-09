@@ -94,7 +94,6 @@ class FilesController {
 
     fileData.localPath = file;
     await dbClient.db.collection('files').insertOne({
-      _id: ObjectId(fileData._id),
       userId: ObjectId(fileData.userId),
       name: fileData.name,
       type: fileData.type,
