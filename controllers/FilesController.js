@@ -20,7 +20,7 @@ class FilesController {
     if (!type || !['folder', 'file', 'image'].includes(type)) {
       return res.status(400).send({ error: 'Missing type' });
     }
-    if (!data && !['folder', 'image'].includes(type)) {
+    if (!data && type !== 'folder') {
       return res.status(400).send({ error: 'Missing data' });
     }
     const parentId = req.body.parentId || '0';
