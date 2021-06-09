@@ -72,7 +72,7 @@ class FilesController {
         parentId,
       });
     }
-    const dir = process.env.FOLDER_PATH || '/tmp/file_manager';
+    const dir = process.env.FOLDER_PATH || './tmp/files_manager';
     if (!fs.existsSync(dir)) {
       fs.mkdir(dir, (err) => {
         if (err) {
@@ -93,7 +93,15 @@ class FilesController {
     }
 
     fileData.localPath = file;
-    await dbClient.db.collection('files').insertOne(fileData);
+    await dbClient.db.collection('files').insertOne({
+      _id: ObjectId(fileData._id),
+      userId: ObjectId(fileData.userId),
+      name: fileData.name,
+      type: fileData.type,
+      isPublic: fileData.isPublic,
+      parentId: fileData.parentId === '0' ? '0' : ObjectId(fileData.parentId),
+      localPath: fileData.localPath,
+    });
 
     fileQueue.add({
       userId: fileData.userId,
@@ -275,12 +283,8 @@ class FilesController {
     const fileType = mime.lookup(file.name);
     const path = size ? `${file.localPath}_${size}` : file.localPath;
 
-    fs.readFile(path, 'UTF-8', (err, data) => {
-      if (err) {
-        return res.status(400).send({ error: err.message });
-      }
-      return res.status(201).type(fileType).send(data);
-    });
+    const fileContent = fs.readFileSync(path, 'UTF-8');
+    return res.status(201).type(fileType).send(fileContent);
   }
 }
 
