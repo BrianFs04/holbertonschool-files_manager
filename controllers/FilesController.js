@@ -204,7 +204,7 @@ class FilesController {
           $limit: 20,
         },
       ];
-      const folder = await dbClient.collection('files').findOne({ _id: ObjectId(parentId) });
+      const folder = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
       if (!folder || folder.type !== 'folder') {
         return res.status(200).send([]);
       }
