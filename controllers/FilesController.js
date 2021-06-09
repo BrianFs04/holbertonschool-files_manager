@@ -11,7 +11,7 @@ class FilesController {
     const fileQueue = new Queue('fileQueue');
     const token = req.header('X-token');
     if (!token) {
-      return res.status(401).send({ error: 'Unauthorized'});
+      return res.status(401).send({ error: 'Unauthorized' });
     }
     const { name, type, data } = req.body;
     if (!name) {
@@ -123,13 +123,20 @@ class FilesController {
     if (!token) {
       res.status(401).send({ error: 'Unauthorized' });
     }
+    const redisTk = await redisClient.get(`auth_${token}`);
+
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisTk) });
 
     const file = await dbClient.db
       .collection('files')
       .findOne({ _id: ObjectId(id) });
-    if (!file || !file.userId) {
+
+    if (user._id.toString() !== file.userId.toString()) {
       return res.status(404).send({ error: 'Not found' });
     }
+
     return res.status(201).send({
       id: file._id,
       userId: file.userId,
@@ -149,21 +156,23 @@ class FilesController {
     const parentId = req.query.parentId || '0';
     const page = req.query.page || 0;
 
-    let agg = [
-      {
-        $match: {
-          parentId,
-        },
-      },
-      {
-        $skip: page * 20,
-      },
-      {
-        $limit: 20,
-      },
-    ];
+    let agg;
     if (parentId === '0') {
       agg = [
+        {
+          $skip: page * 20,
+        },
+        {
+          $limit: 20,
+        },
+      ];
+    } else {
+      agg = [
+        {
+          $match: {
+            parentId: ObjectId(parentId),
+          },
+        },
         {
           $skip: page * 20,
         },
