@@ -11,7 +11,7 @@ class FilesController {
     const fileQueue = new Queue('fileQueue');
     const token = req.header('X-token');
     if (!token) {
-      return res.status(401).send('Unauthorized');
+      return res.status(401).send({ error: 'Unauthorized'});
     }
     const { name, type, data } = req.body;
     if (!name) {
@@ -94,12 +94,11 @@ class FilesController {
 
     fileData.localPath = file;
     await dbClient.db.collection('files').insertOne({
-      _id: ObjectId(fileData._id),
       userId: ObjectId(fileData.userId),
       name: fileData.name,
       type: fileData.type,
       isPublic: fileData.isPublic,
-      parentId: fileData.parentId === '0' ? '0' : ObjectId(fileData.parentId),
+      parentId: fileData.parentId === '0' ? fileData.parentId : ObjectId(fileData.parentId),
       localPath: fileData.localPath,
     });
 
