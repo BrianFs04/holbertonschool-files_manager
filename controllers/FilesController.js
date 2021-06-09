@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import Queue from 'bull';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
-import { getParams, userValid } from '../utils/helpers';
 
 class FilesController {
   static async postUpload(req, res) {
@@ -119,12 +118,19 @@ class FilesController {
   }
 
   static async getShow(req, res) {
-    const { userId } = await getParams(req);
-    if (!userValid(userId)) {
+    const token = req.header('X-token');
+    if (!token) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    const user = await dbClient.db.collection('users').findOne({ _id: ObjectId(userId) });
+    const redisTk = await redisClient.get(`auth_${token}`);
+    if (!redisTk) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisTk) });
     if (!user) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
@@ -139,6 +145,10 @@ class FilesController {
       return res.status(404).send({ error: 'Not found' });
     }
 
+    if (user._id.toString() !== file.userId.toString()) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
     return res.status(201).send({
       id: file._id,
       userId: file.userId,
@@ -150,39 +160,55 @@ class FilesController {
   }
 
   static async getIndex(req, res) {
-    const { userId } = await getParams(req);
-    if (!userValid(userId)) {
+    const token = req.header('X-token');
+    if (!token) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    const user = await dbClient.db.collection('users').findOne({ _id: ObjectId(userId) });
+    const redisTk = await redisClient.get(`auth_${token}`);
+    if (!redisTk) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisTk) });
     if (!user) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    let parentId = req.query.parentId || '0';
+    const parentId = req.query.parentId || '0';
     const page = req.query.page || 0;
 
-    if (parentId !== '0') {
-      if (!userValid(parentId)) {
-        return res.status(401).send({ error: 'Unauthorized' });
-      }
-      parentId = ObjectId(parentId);
-
-      const folder = await dbClient.db.collection('files')
-        .findOne({ _id: ObjectId(parentId) });
+    let agg;
+    if (parentId === '0') {
+      agg = [
+        {
+          $skip: page * 20,
+        },
+        {
+          $limit: 20,
+        },
+      ];
+    } else {
+      agg = [
+        {
+          $match: {
+            parentId: ObjectId(parentId),
+          },
+        },
+        {
+          $skip: page * 20,
+        },
+        {
+          $limit: 20,
+        },
+      ];
+      const folder = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
       if (!folder || folder.type !== 'folder') {
         return res.status(200).send([]);
       }
     }
-
-    let agg;
-
-    if (parentId === '0') {
-      agg = [{ $skip: page * 20 }, { $limit: 20 }];
-    }
-
-    agg = [{ $match: { $and: [{ parentId }] } }, { $skip: page * 20 }, { $limit: 20 }];
 
     const files = await dbClient.db.collection('files').aggregate(agg);
     const allFiles = [];
