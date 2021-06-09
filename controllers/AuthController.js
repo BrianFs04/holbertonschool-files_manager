@@ -5,10 +5,11 @@ import RedisClient from '../utils/redis';
 
 class AuthController {
   static async getConnect(req, res) {
-    if (!req.headers.authorization) {
+    const auth = req.header('Authorization');
+    if (!auth) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
-    const hash = Buffer.from(req.headers.authorization.split(' ')[1], 'base64').toString('utf-8');
+    const hash = Buffer.from(auth.split(' ')[1], 'base64').toString('utf-8');
     const email = hash.split(':')[0];
     const password = hash.split(':')[1];
     const info = {
@@ -40,7 +41,7 @@ class AuthController {
       return res.status(401).send({ error: 'Unauthorized' });
     }
     await RedisClient.del(`auth_${token}`);
-    return res.status(204).end();
+    return res.status(204).send();
   }
 }
 
