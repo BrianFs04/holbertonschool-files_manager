@@ -4,7 +4,8 @@ import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
 class UsersController {
-  static async postNew(email, password, res) {
+  static async postNew(req, res) {
+    const { email, password } = req.body;
     if (!email) {
       return res.status(400).send({ error: 'Missing email' });
     }
