@@ -118,27 +118,28 @@ class FilesController {
   }
 
   static async getShow(req, res) {
-    const { id } = req.params;
     const token = req.header('X-token');
     if (!token) {
-      res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const redisTk = await redisClient.get(`auth_${token}`);
     if (!redisTk) {
-      res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const user = await dbClient.db
       .collection('users')
       .findOne({ _id: ObjectId(redisTk) });
     if (!user) {
-      res.status(401).send({ error: 'Unauthorized' });
+      return res.status(401).send({ error: 'Unauthorized' });
     }
+
+    const { id } = req.params || '';
 
     const file = await dbClient.db
       .collection('files')
-      .findOne({ _id: ObjectId(id) });
+      .findOne({ _id: ObjectId(id), userId: user._id });
 
     if (!file) {
       return res.status(404).send({ error: 'Not found' });
