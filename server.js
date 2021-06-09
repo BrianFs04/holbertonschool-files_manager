@@ -13,6 +13,4 @@ app.use('/', router);
 
 // Port and boot
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log('Ready');
-});
+app.listen(port);
