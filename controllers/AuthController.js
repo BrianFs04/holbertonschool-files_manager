@@ -1,7 +1,7 @@
 import sha1 from 'sha1';
 import { v4 as uuidv4 } from 'uuid';
-import dbClient from '../utils/db';
-import redisClient from '../utils/redis';
+import DBClient from '../utils/db';
+import RedisClient from '../utils/redis';
 
 class AuthController {
   static async getConnect(req, res) {
@@ -21,26 +21,26 @@ class AuthController {
     }
 
     info.password = sha1(info.password);
-    const registeredUser = await dbClient.db.collection('users').findOne(info);
+    const registeredUser = await DBClient.db.collection('users').findOne(info);
     if (!registeredUser) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const token = uuidv4();
     const key = `auth_${token}`;
-    await redisClient.set(key, registeredUser._id.toString(), 86400);
+    await RedisClient.set(key, registeredUser._id.toString(), 86400);
     // 86400 is 24 hours in seconds
 
     return res.status(200).send({ token });
   }
 
   static async getDisconnect(req, res) {
-    const token = req.header('X-token') || null;
+    const token = req.header('X-token');
     if (!token) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
-    await redisClient.del(`auth_${token}`);
-    return res.status(204).send();
+    await RedisClient.del(`auth_${token}`);
+    return res.status(204).end();
   }
 }
 
