@@ -11,7 +11,7 @@ class FilesController {
     const fileQueue = new Queue('fileQueue');
     const token = req.header('X-token');
     if (!token) {
-      return res.status(401).send('Unauthorized');
+      return res.status(401).send({ error: 'Unauthorized'});
     }
     const { name, type, data } = req.body;
     if (!name) {
