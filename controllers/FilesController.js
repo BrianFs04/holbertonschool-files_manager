@@ -314,7 +314,7 @@ class FilesController {
 
     const file = await dbClient.db.collection('files')
       .findOne({ _id: ObjectId(id) });
-    if (id !== file._id.toString()) {
+    if (!file || id !== file._id.toString()) {
       return res.status(404).send({ error: 'Not found' });
     }
 
@@ -332,11 +332,17 @@ class FilesController {
       return res.status(400).send({ error: 'error' });
     }
 
-    const fileType = mime.lookup(file.name);
+    const fileType = mime.contentType(file.name);
     const path = size ? `${file.localPath}_${size}` : file.localPath;
 
-    const fileContent = fs.readFileSync(path, 'UTF-8');
-    return res.status(201).type(fileType).send(fileContent);
+    const fileContent = await fs.readFileSync(path, (err, data) => {
+      if (err) {
+        res.status(404).send({ error: 'Not found' });
+      }
+      return data;
+    });
+    res.setHeader('Content-Type', fileType);
+    return res.status(201).send(fileContent);
   }
 }
 
