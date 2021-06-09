@@ -304,20 +304,32 @@ class FilesController {
     const { id } = req.params;
     const { size } = req.query || null;
 
-    const file = await dbClient.db.collection('files')
-      .findOne({ _id: ObjectId(id) });
-
-    if (!file) {
-      return res.status(404).send({ error: 'Not found' });
+    const token = req.header('X-token');
+    if (!token) {
+      res.status(401).send({ error: 'Unauthorized' });
     }
 
-    const token = req.header('X-token');
-
     const redisTk = await redisClient.get(`auth_${token}`);
+    if (!redisTk) {
+      res.status(401).send({ error: 'Unauthorized' });
+    }
 
     const user = await dbClient.db
       .collection('users')
       .findOne({ _id: ObjectId(redisTk) });
+    if (!user) {
+      res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.db.collection('files')
+      .findOne({ _id: ObjectId(id) });
+    if (!file) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    if (user._id.toString() !== file.userId.toString()) {
+      return res.status(404).send({ error: 'Not found' });
+    }
 
     if (file.isPublic === false) {
       if (!user || user._id.toString() !== file.userId.toString()) {
